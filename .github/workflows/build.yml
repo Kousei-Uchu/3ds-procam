@@ -21,7 +21,7 @@ jobs:
       - name: Install makerom, bannertool, qrencode
         run: |
           apt-get install -y cmake g++ curl zip qrencode
-          curl -sSfL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip -o m.zip
+          curl -sSfL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o m.zip
           unzip -qo m.zip && install -m755 makerom /usr/local/bin/makerom
           curl -sSfL https://github.com/carstene1ns/3ds-bannertool/archive/refs/heads/main.zip -o bt.zip
           unzip -qo bt.zip && cd 3ds-bannertool-main && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
