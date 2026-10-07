@@ -1,0 +1,52 @@
+name: Build CIA
+on:
+  push: { branches: [main, master] }
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack procam.zip if you uploaded it (phone-friendly)
+        run: |
+          apt-get update && apt-get install -y unzip
+          if [ -f procam.zip ]; then
+            rm -rf _z && mkdir _z && unzip -qo procam.zip -d _z
+            if [ -d _z/procam ]; then cp -a _z/procam/. . ; else cp -a _z/. . ; fi
+          fi
+          ls
+      - name: Install makerom, bannertool, qrencode
+        run: |
+          apt-get install -y cmake g++ curl zip qrencode
+          curl -sSfL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip -o m.zip
+          unzip -qo m.zip && install -m755 makerom /usr/local/bin/makerom
+          curl -sSfL https://github.com/carstene1ns/3ds-bannertool/archive/refs/heads/main.zip -o bt.zip
+          unzip -qo bt.zip && cd 3ds-bannertool-main && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4
+          install -m755 build/bannertool /usr/local/bin/bannertool
+      - name: Build 3dsx + cia
+        run: make
+      - name: Make the FBI install QR code
+        run: |
+          URL="https://github.com/${{ github.repository }}/releases/latest/download/procam.cia"
+          qrencode -s 14 -m 4 -l L -o procam_cia_qr.png "$URL"
+          echo "$URL" > install_url.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: procam
+          path: |
+            procam.cia
+            procam.3dsx
+            procam_cia_qr.png
+      - name: Publish release (stable download URL)
+        uses: ncipollo/release-action@v1
+        with:
+          tag: build-${{ github.run_number }}
+          name: PROCAM build ${{ github.run_number }}
+          body: "Open procam_cia_qr.png below, then in FBI choose Remote Install > Scan QR Code."
+          artifacts: "procam.cia,procam.3dsx,procam_cia_qr.png"
+          makeLatest: true
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
