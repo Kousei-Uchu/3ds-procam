@@ -10,13 +10,20 @@ jobs:
     container: devkitpro/devkitarm
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack procam.zip if you uploaded it (phone-friendly)
+      - name: Unpack procam.zip, then apply any patch-*.zip files on top (phone-friendly, small uploads)
         run: |
           apt-get update && apt-get install -y unzip
-          if [ -f procam.zip ]; then
-            rm -rf _z && mkdir _z && unzip -qo procam.zip -d _z
-            if [ -d _z/procam ]; then cp -a _z/procam/. . ; else cp -a _z/. . ; fi
-          fi
+          # overlay one zip onto the repo root; a zip may hold a top-level procam/ folder or the files directly
+          apply_zip() {
+            rm -rf _z && mkdir _z && unzip -qo "$1" -d _z
+            root=_z; [ -d _z/procam ] && root=_z/procam
+            # optional list of files to delete (one path per line)
+            if [ -f "$root/_delete.txt" ]; then while read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$root/_delete.txt"; rm -f "$root/_delete.txt"; fi
+            cp -a "$root"/. .
+          }
+          [ -f procam.zip ] && apply_zip procam.zip
+          # patches are applied in name order: patch-0001.zip, patch-0002.zip, ...
+          for p in patch-*.zip; do [ -f "$p" ] || continue; echo "applying $p"; apply_zip "$p"; done
           ls
       - name: Install makerom, bannertool, qrencode
         run: |
